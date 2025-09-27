@@ -14,7 +14,7 @@
 1. В панели Render нажмите **New + → Blueprint Instance**.
 2. Укажите ссылку на репозиторий и выберите файл `render.yaml`.
 3. Проверьте значения:
-   - **Build Command:** `npm install && npm run build`
+   - **Build Command:** `npm install --include=dev && npm run build`
    - **Start Command:** `npm run start --workspace server`
    - **Runtime:** Node
 4. Нажмите **Apply**. Render создаст веб-сервис `tla-app` с автоматическим деплоем.
@@ -24,14 +24,14 @@
 1. В панели Render нажмите **New + → Web Service** и подключите репозиторий.
 2. Заполните конфигурацию:
    - **Runtime:** Node
-   - **Build Command:** `npm install && npm run build`
+   - **Build Command:** `npm install --include=dev && npm run build`
    - **Start Command:** `npm run start --workspace server`
 3. На вкладке **Environment** убедитесь, что стоит переменная `NODE_ENV=production`. Дополнительно можно задать `STATIC_DIR`, если хотите хранить клиентский билд в другом каталоге.
 4. Выберите план (Free/Starter) и регион, затем создайте сервис.
 
 ## 3. Что происходит при деплое
 
-1. Render выполняет `npm install`, после чего сборка `npm run build` компилирует общий пакет, сервер и клиент.
+1. Render выполняет `npm install --include=dev`, после чего сборка `npm run build` компилирует общий пакет, сервер и клиент. Флаг `--include=dev` обязателен, потому что компиляция использует TypeScript и типы Node.js, которые объявлены в `devDependencies`.
 2. Клиентский бандл попадает в `client/dist`. Во время запуска сервер автоматически раздаёт файлы из этого каталога и слушает WebSocket на том же порту.
 3. Браузерное приложение автоматически подключается к `wss://<ваш-домен>`, поэтому отдельная переменная `VITE_WS_URL` не требуется. При желании её можно задать вручную — клиент возьмёт значение из окружения.
 
