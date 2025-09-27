@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: tla-server
+    env: node
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace shared && npm run build --workspace server
+    startCommand: npm run start --workspace server
+    autoDeploy: true
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+  - type: static_site
+    name: tla-client
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace client
+    staticPublishPath: client/dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_WS_URL
+        value: wss://REPLACE_WITH_SERVER_HOST.onrender.com

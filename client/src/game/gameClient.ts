@@ -630,13 +630,19 @@ export class GameClient {
 }
 
 function getSocketUrl(): string {
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const host = window.location.hostname || "localhost";
-  const port = window.location.port ? `:${window.location.port}` : ":3001";
-  if (window.location.port) {
-    return `${protocol}://${host}:3001`;
+  const envUrl = (import.meta.env.VITE_WS_URL ?? "").trim();
+  if (envUrl.length > 0) {
+    return envUrl.replace(/\/$/, "");
   }
-  return `${protocol}://${host}${port}`;
+
+  const { protocol, hostname, port } = window.location;
+  const wsProtocol = protocol === "https:" ? "wss" : "ws";
+
+  if (port) {
+    return `${wsProtocol}://${hostname}:3001`;
+  }
+
+  return `${wsProtocol}://${hostname}${protocol === "https:" ? "" : ":3001"}`;
 }
 
 function tileKey(layer: MapLayer, q: number, r: number): string {
