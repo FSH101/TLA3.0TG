@@ -1,0 +1,130 @@
+.asset-gallery {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.asset-gallery__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+}
+
+.asset-gallery__title {
+  margin: 0;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.asset-gallery__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.asset-gallery__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1.5rem 1.5rem;
+  overflow: hidden;
+}
+
+.asset-gallery__hint {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px dashed rgba(155, 217, 116, 0.35);
+  background: rgba(9, 24, 14, 0.72);
+  line-height: 1.5;
+}
+
+.asset-gallery__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  overflow-y: auto;
+  padding-bottom: 1rem;
+}
+
+.asset-gallery__grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.asset-gallery__grid::-webkit-scrollbar-thumb {
+  background: rgba(155, 217, 116, 0.35);
+  border-radius: 4px;
+}
+
+.asset-gallery__grid::-webkit-scrollbar-track {
+  background: rgba(3, 9, 6, 0.4);
+}
+
+.asset-gallery__empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 2rem 1rem;
+  border: 1px dashed rgba(155, 217, 116, 0.35);
+  border-radius: 14px;
+  background: rgba(9, 24, 14, 0.55);
+}
+
+.asset-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1.2rem 1.3rem;
+  border-radius: 16px;
+  background: rgba(9, 24, 14, 0.82);
+  border: 1px solid rgba(155, 217, 116, 0.35);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.asset-card h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.asset-card__canvas {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border-radius: 12px;
+  background: rgba(3, 7, 5, 0.9);
+  border: 1px dashed rgba(155, 217, 116, 0.35);
+}
+
+.asset-card__meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+}
+
+.asset-card__meta dt {
+  font-size: 0.95rem;
+  color: rgba(155, 217, 116, 0.75);
+}
+
+.asset-card__meta dd {
+  margin: 0;
+  font-size: 1rem;
+  text-align: right;
+}
+
+.asset-card__status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(155, 217, 116, 0.7);
+}

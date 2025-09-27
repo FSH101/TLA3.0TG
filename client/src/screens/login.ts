@@ -75,7 +75,6 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
   debugButton.type = "button";
   debugButton.className = "secondary";
   debugButton.textContent = "Отладка";
-  debugButton.style.marginTop = "1.5rem";
   debugButton.addEventListener("click", () => {
     const testerNick = "Тестер";
     saveSession({ nick: testerNick });
@@ -98,6 +97,21 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
     }
     navigate("/play");
   });
+
+  const galleryButton = document.createElement("button");
+  galleryButton.type = "button";
+  galleryButton.className = "secondary";
+  galleryButton.textContent = "Галерея ассетов";
+  galleryButton.addEventListener("click", () => {
+    navigate("/tools/assets");
+  });
+
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "inline-actions";
+  actionsRow.style.gap = "1rem";
+  actionsRow.style.marginTop = "1.5rem";
+  actionsRow.style.justifyContent = "flex-end";
+  actionsRow.append(galleryButton, debugButton);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -132,7 +146,7 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
   const stack = document.createElement("div");
   stack.className = "auth-stack";
 
-  card.append(error, form, debugButton);
+  card.append(error, form, actionsRow);
   stack.appendChild(card);
   main.appendChild(stack);
   container.appendChild(main);
