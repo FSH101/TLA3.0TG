@@ -1,0 +1,21 @@
+{
+  "name": "Прототип гексагонального клиента TLA",
+  "short_name": "TLA Гекс",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#0b0b10",
+  "theme_color": "#0b0b10",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDUxMiA1MTInPjxyZWN0IHdpZHRoPSc1MTInIGhlaWdodD0nNTEyJyBmaWxsPScjMGIwYjEwJy8+PGcgdHJhbnNmb3JtPSd0cmFuc2xhdGUoMjU2IDI1NiknPjxjaXJjbGUgcj0nMTgwJyBmaWxsPSdub25lJyBzdHJva2U9JyMzOWZmMTQnIHN0cm9rZS13aWR0aD0nMjQnLz48Y2lyY2xlIHI9JzEyMCcgZmlsbD0nIzM5ZmYxNCcvPjwvZz48L3N2Zz4=",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDUxMiA1MTInPjxyZWN0IHdpZHRoPSc1MTInIGhlaWdodD0nNTEyJyBmaWxsPScjMGIwYjEwJy8+PGcgdHJhbnNmb3JtPSd0cmFuc2xhdGUoMjU2IDI1NiknPjxjaXJjbGUgcj0nMTgwJyBmaWxsPSdub25lJyBzdHJva2U9JyMzOWZmMTQnIHN0cm9rZS13aWR0aD0nMjQnLz48Y2lyY2xlIHI9JzEyMCcgZmlsbD0nIzM5ZmYxNCcvPjwvZz48L3N2Zz4=",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

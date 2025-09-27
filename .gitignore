@@ -1,0 +1,12 @@
+node_modules/
+dist/
+client/dist/
+server/dist/
+shared/dist/
+artifacts/
+.vite/
+.DS_Store
+npm-debug.log*
+*.log
+*.zip
+coverage/
