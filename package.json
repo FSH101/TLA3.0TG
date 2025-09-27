@@ -8,7 +8,8 @@
     "build": "npm run build --workspace shared && npm run build --workspace server && npm run build --workspace client",
     "preview": "npm run preview --workspace client",
     "test": "npm run test --workspace shared",
-    "archive": "node tools/create-zip.mjs"
+    "archive": "node tools/create-zip.mjs",
+    "import:fomap": "node tools/import-fomap.mjs"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -9,6 +9,7 @@ export interface MapTile {
   id: string;
   block?: boolean;
   light?: number;
+  meta?: Record<string, unknown>;
 }
 
 export interface MapJSON {
@@ -20,5 +21,9 @@ export interface MapJSON {
   tiles: MapTile[];
   spawns?: {
     player?: Hex[];
+  };
+  source?: {
+    type: string;
+    file?: string;
   };
 }

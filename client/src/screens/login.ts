@@ -1,4 +1,10 @@
-import { getCharacter, getSession, getUser, saveSession } from "../state/storage";
+import {
+  getCharacter,
+  getSession,
+  getUser,
+  saveCharacter,
+  saveSession,
+} from "../state/storage";
 import type { RouteContext } from "../router";
 
 export function renderLogin({ container, navigate }: RouteContext): void {
@@ -57,22 +63,41 @@ export function renderLogin({ container, navigate }: RouteContext): void {
   rememberText.textContent = "Оставаться в системе";
   rememberLabel.appendChild(rememberText);
 
-  const registerLink = document.createElement("a");
-  registerLink.href = "/auth/register";
-  registerLink.textContent = "Зарегистрировать нового жителя";
-  registerLink.addEventListener("click", (event) => {
-    event.preventDefault();
-    navigate("/auth/register");
-  });
-
   rememberRow.appendChild(rememberLabel);
-  rememberRow.appendChild(registerLink);
 
   const submit = document.createElement("button");
   submit.type = "submit";
   submit.textContent = "Авторизоваться";
 
   form.append(loginLabel, passwordLabel, rememberRow, submit);
+
+  const debugButton = document.createElement("button");
+  debugButton.type = "button";
+  debugButton.className = "secondary";
+  debugButton.textContent = "Отладка";
+  debugButton.style.marginTop = "1.5rem";
+  debugButton.addEventListener("click", () => {
+    const testerNick = "Тестер";
+    saveSession({ nick: testerNick });
+    const existingCharacter = getCharacter();
+    if (!existingCharacter) {
+      const defaultSpecial: Record<string, number> = {
+        "Сила": 5,
+        "Восприятие": 5,
+        "Выносливость": 5,
+        "Харизма": 5,
+        "Интеллект": 5,
+        "Ловкость": 5,
+        "Удача": 5,
+      };
+      saveCharacter({
+        name: testerNick,
+        gender: "male",
+        special: defaultSpecial,
+      });
+    }
+    navigate("/play");
+  });
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -104,7 +129,7 @@ export function renderLogin({ container, navigate }: RouteContext): void {
     }
   });
 
-  card.append(error, form);
+  card.append(error, form, debugButton);
   main.appendChild(card);
   container.appendChild(main);
 }
