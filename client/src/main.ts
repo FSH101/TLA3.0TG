@@ -4,6 +4,7 @@ import { renderLogin } from "./screens/login";
 import { renderRegister } from "./screens/register";
 import { renderCharacterCreation } from "./screens/character";
 import { renderPlay } from "./screens/play";
+import { renderFrDemo } from "./screens/fr-demo";
 import { getSession } from "./state/storage";
 
 const root = document.getElementById("app");
@@ -26,6 +27,7 @@ router.register("/auth/login", renderLogin);
 router.register("/auth/register", renderRegister);
 router.register("/char/new", renderCharacterCreation);
 router.register("/play", renderPlay);
+router.register("/tools/fr-demo", renderFrDemo);
 router.register("/404", ({ container }) => {
   const main = document.createElement("main");
   main.className = "screen";
