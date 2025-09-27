@@ -1,0 +1,21 @@
+{
+  "name": "@tla/client",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tla/shared": "file:../shared",
+    "pixi.js": "^7.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.8"
+  }
+}

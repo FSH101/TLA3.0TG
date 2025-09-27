@@ -1,0 +1,20 @@
+{
+  "id": "demo",
+  "size": { "width": 64, "height": 64 },
+  "tiles": [
+    { "layer": "floor", "q": 0, "r": 0, "id": "tile_placeholder" },
+    { "layer": "floor", "q": 1, "r": 0, "id": "tile_placeholder" },
+    { "layer": "floor", "q": 0, "r": 1, "id": "tile_placeholder" },
+    { "layer": "floor", "q": 1, "r": 1, "id": "tile_placeholder" },
+    { "layer": "wall", "q": 4, "r": 4, "id": "tile_placeholder", "block": true },
+    { "layer": "object", "q": 3, "r": 5, "id": "tile_placeholder" }
+  ],
+  "spawns": {
+    "player": [
+      { "q": 2, "r": 2 },
+      { "q": 3, "r": 2 },
+      { "q": 2, "r": 3 },
+      { "q": 3, "r": 3 }
+    ]
+  }
+}
