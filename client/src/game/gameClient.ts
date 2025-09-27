@@ -1,6 +1,14 @@
-import { Application, Container, Graphics, Texture, Sprite, type ApplicationOptions } from "pixi.js";
+import { Application, Container, Graphics, Texture, Sprite, Assets, type ApplicationOptions } from "pixi.js";
 import type { Hex, MapJSON, MapLayer, ServerMsg, ClientMsg } from "@tla/shared";
-import { hexToWorld, worldToHex, HEX_TILE_WIDTH, HEX_TILE_HEIGHT } from "@tla/shared";
+import {
+  applyPalette,
+  FALLOUT_GIMP_PALETTE,
+  hexToWorld,
+  parseFr,
+  worldToHex,
+  HEX_TILE_WIDTH,
+  HEX_TILE_HEIGHT,
+} from "@tla/shared";
 import { BUILD_VERSION, MAX_SCALE, MIN_SCALE } from "./constants";
 import { GameHud } from "./hud";
 import { MapEditor, type EditorMode } from "./editor";
@@ -35,6 +43,7 @@ export class GameClient {
   private gridLayer!: Graphics;
   private selectedMarker!: Graphics;
   private localMarker!: Graphics;
+  private debugCharacter: Sprite | null = null;
   private otherMarkers = new Map<string, PlayerMarker>();
   private hud!: GameHud;
   private editor!: MapEditor;
@@ -81,7 +90,7 @@ export class GameClient {
     );
     this.app.stage.addChild(this.world);
 
-    this.createTextures();
+    await this.loadTextures();
     this.createHighlight();
     this.createLocalMarker();
 
@@ -99,6 +108,10 @@ export class GameClient {
       (map) => this.triggerDownload(map),
       (map) => this.setMap(map),
     );
+
+    if (import.meta.env.DEV) {
+      await this.loadDebugScene();
+    }
 
     this.setupInteractions();
     this.setupKeyboardShortcuts();
@@ -147,7 +160,48 @@ export class GameClient {
     this.app.destroy(true, { children: true });
   }
 
-  private createTextures(): void {
+  private async loadTextures(): Promise<void> {
+    if (!import.meta.env.DEV) {
+      this.useGeneratedTextures();
+      return;
+    }
+
+    const textureNames = ["en1.png", "en2.png", "en4.png"];
+    const baseCandidates = ["/assets", "/debug"];
+    const failures: Array<{ base: string; file?: string; error: unknown }> = [];
+
+    for (const base of baseCandidates) {
+      const textures: Texture[] = [];
+      let success = true;
+      for (const file of textureNames) {
+        try {
+          textures.push(await this.loadTexture(`${base}/${file}`));
+        } catch (error) {
+          failures.push({ base, file, error });
+          success = false;
+          break;
+        }
+      }
+      if (success) {
+        [this.floorTexture, this.wallTexture, this.objectTexture] = textures;
+        return;
+      }
+    }
+
+    if (failures.length > 0) {
+      console.warn(
+        "Не удалось загрузить отладочные текстуры ни из одной директории, используются материалы по умолчанию",
+        failures,
+      );
+    }
+    this.useGeneratedTextures();
+  }
+
+  private async loadTexture(url: string): Promise<Texture> {
+    return await Assets.load<Texture>(url);
+  }
+
+  private useGeneratedTextures(): void {
     this.floorTexture = this.createTileTexture(0x1c2432, 0x2f3a4b);
     this.wallTexture = this.createTileTexture(0x31394a, 0x46536a);
     this.objectTexture = this.createTileTexture(0x46536a, 0x5e6f89);
@@ -193,6 +247,73 @@ export class GameClient {
     this.localMarker.drawCircle(0, 0, HEX_TILE_HEIGHT * 0.35);
     this.localMarker.endFill();
     this.markersLayer.addChild(this.localMarker);
+  }
+
+  private async loadDebugScene(): Promise<void> {
+    const width = 12;
+    const height = 10;
+    const debugMap: MapJSON = {
+      id: "debug-map",
+      size: { width, height },
+      tiles: [],
+    };
+
+    this.setMap(debugMap);
+
+    const playerHex: Hex = { q: Math.floor(width / 2), r: Math.floor(height / 2) };
+    const { x, y } = hexToWorld(playerHex);
+    this.localMarker.position.set(x, y);
+    this.updateHighlight(playerHex);
+
+    await this.spawnDebugCharacter(playerHex);
+  }
+
+  private async spawnDebugCharacter(pos: Hex): Promise<void> {
+    try {
+      const frmCandidates = ["/assets/HMCLJTAA.FRM", "/debug/HMCLJTAA.FRM"];
+      let buffer: ArrayBuffer | null = null;
+      const failures: Array<{ path: string; error: unknown }> = [];
+
+      for (const path of frmCandidates) {
+        try {
+          const response = await fetch(path);
+          if (!response.ok) {
+            failures.push({ path, error: new Error(`HTTP ${response.status}`) });
+            continue;
+          }
+          buffer = await response.arrayBuffer();
+          break;
+        } catch (error) {
+          failures.push({ path, error });
+        }
+      }
+
+      if (!buffer) {
+        throw failures.length > 0 ? failures : new Error("FRM-файл не найден ни в одной директории");
+      }
+
+      const decoded = parseFr(buffer);
+      const frames = applyPalette(decoded, FALLOUT_GIMP_PALETTE);
+      const frame = frames[0]?.[0];
+      if (!frame) {
+        throw new Error("Файл FRM не содержит кадров");
+      }
+
+      const rgba = frame.rgba instanceof Uint8ClampedArray ? new Uint8Array(frame.rgba) : frame.rgba;
+      const texture = Texture.fromBuffer(rgba, frame.w, frame.h);
+
+      this.debugCharacter?.destroy();
+      const sprite = new Sprite(texture);
+      sprite.anchor.set(0.5, 0.88);
+
+      const { x, y } = hexToWorld(pos);
+      sprite.position.set(x, y + HEX_TILE_HEIGHT * 0.5);
+
+      this.objectLayer.addChild(sprite);
+      this.debugCharacter = sprite;
+    } catch (error) {
+      console.warn("Не удалось загрузить отладочного персонажа", error);
+    }
   }
 
   private setupInteractions(): void {
@@ -413,6 +534,8 @@ export class GameClient {
     this.wallLayer.removeChildren();
     this.objectLayer.removeChildren();
     this.gridLayer.clear();
+    this.debugCharacter?.destroy();
+    this.debugCharacter = null;
 
     for (let q = 0; q < map.size.width; q += 1) {
       for (let r = 0; r < map.size.height; r += 1) {
