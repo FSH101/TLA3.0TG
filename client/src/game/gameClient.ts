@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Texture, Sprite } from "pixi.js";
+import { Application, Container, Graphics, Texture, Sprite, type ApplicationOptions } from "pixi.js";
 import type { Hex, MapJSON, MapLayer, ServerMsg, ClientMsg } from "@tla/shared";
 import { hexToWorld, worldToHex, HEX_TILE_WIDTH, HEX_TILE_HEIGHT } from "@tla/shared";
 import { BUILD_VERSION, MAX_SCALE, MIN_SCALE } from "./constants";
@@ -60,11 +60,7 @@ export class GameClient {
   constructor(private readonly options: GameClientOptions) {}
 
   async init(): Promise<void> {
-    this.app = await Application.init({
-      backgroundAlpha: 0,
-      antialias: true,
-      resizeTo: this.options.root,
-    });
+    this.app = await this.createApplication();
     this.options.root.appendChild(this.app.canvas);
 
     this.world = new Container();
@@ -115,6 +111,29 @@ export class GameClient {
     if (this.disposed) {
       this.performDestroy();
     }
+  }
+
+  private async createApplication(): Promise<Application> {
+    const options: ApplicationOptions = {
+      backgroundAlpha: 0,
+      antialias: true,
+      resizeTo: this.options.root,
+    };
+
+    const ctor = Application as typeof Application & {
+      init?: (opts: ApplicationOptions) => Promise<Application>;
+    };
+
+    if (typeof ctor.init === "function") {
+      return await ctor.init(options);
+    }
+
+    const app = new Application(options);
+    const maybeInit = app as Application & { init?: () => Promise<void> };
+    if (typeof maybeInit.init === "function") {
+      await maybeInit.init();
+    }
+    return app;
   }
 
   destroy(): void {

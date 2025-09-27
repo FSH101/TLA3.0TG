@@ -6,8 +6,6 @@ import {
   saveSession,
 } from "../state/storage";
 import type { RouteContext } from "../router";
-import introFrmRaw from "../assets/intro.frm?raw";
-import { parseFrmJson, playFrmAnimation } from "../lib/frm";
 
 export function renderLogin({ container, navigate }: RouteContext): (() => void) | void {
   const session = getSession();
@@ -18,17 +16,6 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
 
   const main = document.createElement("main");
   main.className = "screen";
-
-  const hero = document.createElement("section");
-  hero.className = "frm-hero";
-  const heroCanvas = document.createElement("canvas");
-  heroCanvas.className = "frm-hero__canvas";
-  hero.appendChild(heroCanvas);
-
-  const heroCaption = document.createElement("p");
-  heroCaption.className = "frm-hero__caption";
-  heroCaption.textContent = "Протокол приветствия активирован";
-  hero.appendChild(heroCaption);
 
   const card = document.createElement("div");
   card.className = "pip-card";
@@ -88,7 +75,6 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
   debugButton.type = "button";
   debugButton.className = "secondary";
   debugButton.textContent = "Отладка";
-  debugButton.style.marginTop = "1.5rem";
   debugButton.addEventListener("click", () => {
     const testerNick = "Тестер";
     saveSession({ nick: testerNick });
@@ -111,6 +97,21 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
     }
     navigate("/play");
   });
+
+  const galleryButton = document.createElement("button");
+  galleryButton.type = "button";
+  galleryButton.className = "secondary";
+  galleryButton.textContent = "Галерея ассетов";
+  galleryButton.addEventListener("click", () => {
+    navigate("/tools/assets");
+  });
+
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "inline-actions";
+  actionsRow.style.gap = "1rem";
+  actionsRow.style.marginTop = "1.5rem";
+  actionsRow.style.justifyContent = "flex-end";
+  actionsRow.append(galleryButton, debugButton);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -144,22 +145,11 @@ export function renderLogin({ container, navigate }: RouteContext): (() => void)
 
   const stack = document.createElement("div");
   stack.className = "auth-stack";
-  stack.append(hero, card);
 
-  card.append(error, form, debugButton);
+  card.append(error, form, actionsRow);
+  stack.appendChild(card);
   main.appendChild(stack);
   container.appendChild(main);
 
-  let stopAnimation: (() => void) | null = null;
-  try {
-    const animation = parseFrmJson(introFrmRaw);
-    stopAnimation = playFrmAnimation(heroCanvas, animation);
-  } catch (error) {
-    console.error("Не удалось отобразить FRM-анимацию", error);
-    stack.removeChild(hero);
-  }
-
-  return () => {
-    stopAnimation?.();
-  };
+  return () => {};
 }
