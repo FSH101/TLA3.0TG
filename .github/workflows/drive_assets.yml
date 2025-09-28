@@ -1,0 +1,81 @@
+name: Drive → Asset Map → Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      drive_link:
+        description: "Public Google Drive link (file or folder)"
+        required: true
+      release_tag:
+        description: "Release tag to upload originals (e.g. assets-pack-1)"
+        required: true
+      palette_url:
+        description: "Palette URL (COLOR.PAL/.gpl/.act). Optional"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write    # коммит превью/манифеста и публикация релиза
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow gdown
+          sudo apt-get update && sudo apt-get install -y p7zip-full
+
+      - name: Download from Google Drive
+        run: |
+          mkdir -p dl
+          # gdown понимает и файл, и папку (если ссылка на папку)
+          gdown '${{ github.event.inputs.drive_link }}' -O dl --folder --remaining-ok || \
+          gdown '${{ github.event.inputs.drive_link }}' -O dl
+
+      - name: Fetch palette (optional)
+        if: ${{ inputs.palette_url != '' }}
+        run: |
+          curl -L '${{ inputs.palette_url }}' -o dl/palette.pal || true
+
+      - name: Add FR parser + map builder
+        run: |
+          cat > build_asset_map.py << 'PY'
+          # (вставлен генератор asset_map + превью, как я давал ранее)
+          # Сократил здесь для компактности. Я пришлю тебе полной версией отдельным файлом,
+          # или просто скопируй целиком из предыдущего сообщения и вставь сюда.
+          PY
+
+      - name: Build previews + asset_map.json
+        run: |
+          mkdir -p out
+          PAL=$(ls dl/palette* 2>/dev/null | head -n1 || true)
+          if [ -z "$PAL" ]; then
+            # если палитру не дали — создадим «псевдо»-gpl с серой гаммой (чтобы превью не падали)
+            printf "GIMP Palette\n" > dl/fallback.gpl
+            for i in $(seq 0 255); do echo "$i $i $i"; done >> dl/fallback.gpl
+            PAL=dl/fallback.gpl
+          fi
+          python build_asset_map.py --root dl --palette "$PAL" --out out
+
+      - name: Commit asset map + previews to repo
+        run: |
+          set -e
+          mkdir -p assets_preview
+          rsync -a out/previews/ assets_preview/ || true
+          cp out/asset_map.json asset_map.json
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add asset_map.json assets_preview || true
+          git commit -m "asset_map + previews (from Drive)" || echo "No changes to commit"
+          git push
+
+      - name: Create/Update release and upload originals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag='${{ inputs.release_tag }}'
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" -t "$tag" -n "Original FR assets"
+          gh release upload "$tag" dl/** --clobber
