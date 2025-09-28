@@ -1,4 +1,4 @@
-name: Drive → Sort FR assets → Release (built-in palette, no local installs)
+name: Drive → Sort FR assets → Release (built-in palette, robust download)
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write     # коммит PNG + asset_map.json
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -30,13 +30,79 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pillow gdown
-          sudo apt-get update && sudo apt-get install -y p7zip-full
+          sudo apt-get update && sudo apt-get install -y p7zip-full unzip file
 
-      - name: Download from Google Drive
+      - name: Download from Google Drive (robust)
         run: |
+          set -e
           mkdir -p dl
-          # если ссылка на папку — возьмём --folder, если на файл — обычный режим
-          gdown '${{ inputs.drive_link }}' -O dl --folder --remaining-ok || gdown '${{ inputs.drive_link }}' -O dl
+          LINK='${{ github.event.inputs.drive_link }}'
+          echo "Input link: $LINK"
+
+          # 1) Try FILE mode first (works for view-links with --fuzzy)
+          if gdown --fuzzy "$LINK" -O dl/asset.bin; then
+            echo "::notice::Downloaded as a single file (dl/asset.bin)"
+          else
+            echo "::notice::File mode failed, trying FOLDER mode…"
+            gdown --fuzzy "$LINK" -O dl --folder --remaining-ok
+          fi
+
+          echo "dl contents:"
+          ls -lah dl || true
+
+          # Guard: if asset.bin is tiny, likely HTML preview (not the real file)
+          if [ -f dl/asset.bin ]; then
+            BYTES=$(stat -c%s dl/asset.bin)
+            if [ "$BYTES" -lt 102400 ]; then
+              echo "::error::Downloaded file is too small (<100KB). Likely HTML preview page. Make sure the link is public or use the uc?export=download&id=... form."
+              exit 1
+            fi
+          fi
+
+      - name: Extract archives (zip/7z) if any
+        run: |
+          set -e
+          mkdir -p dl_extracted
+          shopt -s nullglob
+
+          moved=0
+          if [ -f dl/asset.bin ]; then
+            MIME=$(file -b --mime-type dl/asset.bin)
+            echo "MIME for asset.bin: $MIME"
+            if 7z l dl/asset.bin >/dev/null 2>&1; then
+              echo "Treat as archive via 7z"
+              7z x -o"dl_extracted" -y dl/asset.bin
+              moved=1
+            elif [ "$MIME" = "application/zip" ]; then
+              echo "Treat as ZIP"
+              unzip -q dl/asset.bin -d dl_extracted
+              moved=1
+            fi
+            if [ $moved -eq 0 ]; then
+              echo "Not an archive, moving single file"
+              mv dl/asset.bin dl_extracted/
+            fi
+          fi
+
+          for f in dl/*; do
+            [ -e "$f" ] || continue
+            if [ -d "$f" ]; then
+              cp -r "$f" dl_extracted/
+              continue
+            fi
+            if 7z l "$f" >/dev/null 2>&1; then
+              7z x -o"dl_extracted" -y "$f"
+            else
+              MIME=$(file -b --mime-type "$f")
+              case "$MIME" in
+                application/zip) unzip -q "$f" -d dl_extracted ;;
+                *) cp "$f" dl_extracted/ ;;
+              esac
+            fi
+          done
+
+          echo "Extracted tree (first 100 entries):"
+          find dl_extracted -type f | head -n 100
 
       - name: Write extractor (with built-in Fallout palette)
         shell: bash
@@ -47,12 +113,10 @@ jobs:
           # Разбирает все *.FR* (FRM/FR1/...) из корня, раскрашивает встроенной палитрой,
           # классифицирует и раскладывает по папкам: assets/<kind>/<category>/<name>/{dir_0/...}
           # Дополнительно пишет assets/asset_map.json (минимум).
-          # Требует: Pillow (ставится в раннере).
           import argparse, struct, re, json
           from pathlib import Path
           from PIL import Image
 
-          # ---------- Вшитая GIMP-палитра (256 цветов) ----------
           _GPL = """GIMP Palette
           Name: !Fallout
           Columns: 16
@@ -328,7 +392,6 @@ jobs:
               return cols[:256]
           PALETTE = load_palette_gpl_text(_GPL)
 
-          # ---------- FR формат ----------
           def be_u16(b,o): return struct.unpack_from(">H",b,o)[0]
           def be_s16(b,o): return struct.unpack_from(">h",b,o)[0]
           def be_u32(b,o): return struct.unpack_from(">I",b,o)[0]
@@ -367,7 +430,6 @@ jobs:
                           px[x,y]=(r,g,b,255)
               return img
 
-          # ---------- Классификация ----------
           def classify(path: Path, parsed):
               pstr = str(path).lower()
               fname = path.name.lower()
@@ -401,10 +463,9 @@ jobs:
               ap = argparse.ArgumentParser()
               ap.add_argument("--root", required=True, help="Папка с FR* файлами")
               ap.add_argument("--out", required=True, help="Папка вывода")
-              ap.add_argument("--export", choices=["frames","spritesheet"], default="frames",
-                              help="Сохранять отдельные кадры (frames) или спрайт-листы (spritesheet)")
-              ap.add_argument("--gif", action="store_true", help="Также сделать GIF по первому направлению")
-              ap.add_argument("--fps", type=int, default=10, help="FPS для GIF")
+              ap.add_argument("--export", choices=["frames","spritesheet"], default="frames")
+              ap.add_argument("--gif", action="store_true")
+              ap.add_argument("--fps", type=int, default=10)
               args = ap.parse_args()
 
               root = Path(args.root)
@@ -486,18 +547,21 @@ jobs:
           if __name__=="__main__":
               main()
           PY
+          chmod +x fr_extract_and_sort.py
 
       - name: Extract & sort → assets/
         run: |
+          set -e
           mkdir -p assets
           python fr_extract_and_sort.py \
-            --root dl \
+            --root dl_extracted \
             --out assets \
-            --export '${{ inputs.export_kind }}' \
-            $([ '${{ inputs.make_gif }}' = 'true' ] && echo --gif || true)
+            --export '${{ github.event.inputs.export_kind }}' \
+            $([ '${{ github.event.inputs.make_gif }}' = 'true' ] && echo --gif || true)
 
       - name: Commit PNGs + asset_map.json
         run: |
+          set -e
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add assets || true
@@ -508,6 +572,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view '${{ inputs.release_tag }}' >/dev/null 2>&1 || \
-            gh release create '${{ inputs.release_tag }}' -t '${{ inputs.release_tag }}' -n 'Original FR assets'
-          gh release upload '${{ inputs.release_tag }}' dl/** --clobber
+          set -e
+          gh release view '${{ github.event.inputs.release_tag }}' >/dev/null 2>&1 || \
+            gh release create '${{ github.event.inputs.release_tag }}' -t '${{ github.event.inputs.release_tag }}' -n 'Original FR assets'
+          gh release upload '${{ github.event.inputs.release_tag }}' dl/** --clobber
