@@ -1,0 +1,70 @@
+name: Release from main (package & upload)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., v0.1.0)"
+        required: true
+      name:
+        description: "Release title (defaults to tag)"
+        required: false
+        default: ""
+      target:
+        description: "Target branch/commit"
+        required: false
+        default: "main"
+      # Что положить в релиз: укажи один или несколько glob-паттернов через запятую
+      asset_globs:
+        description: "Comma-separated file globs to include (e.g., assets/**,dist/**,README.md)"
+        required: true
+        default: "assets/**"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.target }}
+
+      - name: Expand globs to a list
+        id: list
+        shell: bash
+        run: |
+          IFS=',' read -ra GLOBS <<< "${{ github.event.inputs.asset_globs }}"
+          mkdir -p release_files
+          for g in "${GLOBS[@]}"; do
+            # trim spaces
+            g=$(echo "$g" | xargs)
+            echo "Adding files by glob: $g"
+            shopt -s globstar nullglob
+            for f in $g; do
+              [ -d "$f" ] && continue
+              # сохраняем структуру путей
+              mkdir -p "release_files/$(dirname "$f")"
+              cp -a "$f" "release_files/$f"
+            done
+          done
+
+          echo "Collected files:"
+          find release_files -type f | head -n 100 || true
+
+          # Если нужно упаковать всё одной архивацией — раскомментируй две строки ниже:
+          # zip -r release_bundle.zip release_files/*
+          # echo "bundle=release_bundle.zip" >> $GITHUB_OUTPUT
+
+      - name: Create/Update release and upload files
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.name != '' && github.event.inputs.name || github.event.inputs.tag }}
+          target_commitish: ${{ github.event.inputs.target }}
+          files: |
+            release_files/**
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
