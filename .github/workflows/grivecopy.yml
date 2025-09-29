@@ -1,0 +1,128 @@
+name: Download & Extract from Google Drive
+
+on:
+  workflow_dispatch:
+    inputs:
+      drive_link:
+        description: "Public Google Drive link (file or folder)"
+        required: true
+      out_dir:
+        description: "Path in repo to extract into (e.g., assets/raw)"
+        required: true
+        default: "assets/raw"
+      clean_out:
+        description: "Clean target folder before extraction (true/false)"
+        required: false
+        default: "true"
+      commit_output:
+        description: "Commit extracted files to the repo (true/false)"
+        required: false
+        default: "true"
+
+jobs:
+  fetch_and_extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install gdown
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full unzip file
+
+      - name: Prepare folders
+        run: |
+          set -e
+          mkdir -p dl dl_extracted "${{ github.event.inputs.out_dir }}"
+
+      - name: Download from Google Drive (robust for file/folder/view links)
+        run: |
+          set -e
+          LINK='${{ github.event.inputs.drive_link }}'
+          echo "Input link: $LINK"
+
+          # Try as a single FILE first (handles 'view' links with --fuzzy)
+          if gdown --fuzzy "$LINK" -O dl/asset.bin; then
+            echo "::notice::Downloaded as single file -> dl/asset.bin"
+            # Guard against HTML preview
+            BYTES=$(stat -c%s dl/asset.bin)
+            if [ "$BYTES" -lt 102400 ]; then
+              echo "::warning::Downloaded file <100KB, might be HTML preview. Trying folder mode…"
+              rm -f dl/asset.bin
+              gdown --fuzzy "$LINK" -O dl --folder --remaining-ok
+            fi
+          else
+            echo "::notice::File mode failed, trying folder mode…"
+            gdown --fuzzy "$LINK" -O dl --folder --remaining-ok
+          fi
+
+          echo "dl contents:"
+          ls -lah dl || true
+
+      - name: Extract archives / move files
+        run: |
+          set -e
+          shopt -s nullglob
+
+          # Optionally clean output
+          if [ '${{ github.event.inputs.clean_out }}' = 'true' ]; then
+            echo "::notice::Cleaning target: ${{ github.event.inputs.out_dir }}"
+            rm -rf "${{ github.event.inputs.out_dir }}"/*
+          fi
+
+          # If we have a single downloaded file, try to extract; otherwise process all in dl/
+          if [ -f dl/asset.bin ]; then
+            if 7z l dl/asset.bin >/dev/null 2>&1; then
+              7z x -o"dl_extracted" -y dl/asset.bin
+            else
+              MIME=$(file -b --mime-type dl/asset.bin)
+              if [ "$MIME" = "application/zip" ]; then
+                unzip -q dl/asset.bin -d dl_extracted
+              else
+                # Not an archive — copy as-is
+                cp dl/asset.bin dl_extracted/
+              fi
+            fi
+          fi
+
+          # For any files/folders in dl/, extract if archive, else copy
+          for f in dl/*; do
+            [ -e "$f" ] || continue
+            if [ -d "$f" ]; then
+              cp -r "$f" dl_extracted/
+              continue
+            fi
+            if 7z l "$f" >/dev/null 2>&1; then
+              7z x -o"dl_extracted" -y "$f"
+            else
+              MIME=$(file -b --mime-type "$f")
+              if [ "$MIME" = "application/zip" ]; then
+                unzip -q "$f" -d dl_extracted
+              else
+                cp "$f" dl_extracted/
+              fi
+            fi
+          done
+
+          echo "Extracted tree (first 100 entries):"
+          find dl_extracted -type f | head -n 100
+
+          # Move extracted payload into target out_dir
+          rsync -a dl_extracted/ "${{ github.event.inputs.out_dir }}/"
+
+          echo "Final target tree (first 100 entries):"
+          find "${{ github.event.inputs.out_dir }}" -type f | head -n 100
+
+      - name: Commit extracted files
+        if: ${{ github.event.inputs.commit_output == 'true' }}
+        run: |
+          set -e
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add "${{ github.event.inputs.out_dir }}" || true
+          git commit -m "Download & extract from Google Drive into ${{ github.event.inputs.out_dir }}" || echo "No changes"
+          git push
