@@ -10,3 +10,7 @@
 - Implemented the Express server entrypoint with `/healthz`, `/api/auth/*` stub routes, and the `/art/**` asset proxy that falls back to the original Fallout art when no pre-converted file exists.
 - Introduced Prisma schema for `User` and `Session`, along with a placeholder WebSocket server registration.
 - Next: Build the `.fomap`/proto import tooling to generate `assets/maps/*.json` and flesh out Prisma migrations plus real auth handlers.
+
+## 2024-05-10
+- Настроен репозиторный «санитайзер» для тяжёлых ассетов: расширенный `.gitignore`, запрет диффов для бинарников через `.gitattributes` и workflow `fetch_assets` для загрузки архивов без коммита.
+- Next: запустить работу над импортёром карт (`feat/tools-import-fomap`).
