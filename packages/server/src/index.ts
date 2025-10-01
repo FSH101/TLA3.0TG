@@ -12,6 +12,7 @@ import morgan from 'morgan';
 import { artRouter } from './assets';
 import { env } from './env';
 import { authRouter } from './routes/auth';
+import { assetsRouter } from './routes/assets';
 import { registerWsServer } from './ws/server';
 import { mapsRouter } from './routes/maps';
 
@@ -36,6 +37,7 @@ app.get('/healthz', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/assets', assetsRouter);
 app.use('/api/maps', mapsRouter);
 app.use('/art', artRouter);
 
