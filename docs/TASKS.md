@@ -9,10 +9,10 @@ This document tracks the mandatory deliverables for the Fallout-inspired web rem
 - [x] Populate `packages/server/.env.example` with all required environment variables.
 
 ## Tools: map and asset import
-- [ ] Implement `.fomap` parser (`packages/tools/fomap-import.ts`) producing structured map data.
-- [ ] Implement proto PID resolver (`packages/tools/proto-resolve.ts`).
-- [ ] Build CLI importer (`packages/tools/import-map.ts`) that writes `assets/maps/<mapId>.json`.
-- [ ] Provide `import-all` utility and npm scripts to batch-generate maps.
+- [x] Implement `.fomap` parser (`packages/tools/fomap-import.ts`) producing structured map data.
+- [x] Implement proto PID resolver (`packages/tools/proto-resolve.ts`).
+- [x] Build CLI importer (`packages/tools/import-map.ts`) that writes `assets/maps/<mapId>.json`.
+- [x] Provide `import-all` utility and npm scripts to batch-generate maps.
 - [ ] Add unit tests for the import tooling.
 
 ## Client runtime FR/FRM decoding
