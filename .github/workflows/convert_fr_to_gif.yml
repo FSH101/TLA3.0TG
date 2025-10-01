@@ -1,0 +1,59 @@
+name: Convert FR/FRM assets to GIF (with Fallout palette)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_dir:
+        description: "Откуда брать FR/FRM (рекурсивно)"
+        required: true
+        default: "assets_1/art"
+      dest_dir:
+        description: "Куда класть GIF (структура каталогов сохраняется)"
+        required: true
+        default: "packages/client/public/art"
+      split_dirs:
+        description: "true = 6 GIF (dir0..dir5), false = только dir0"
+        required: true
+        default: "true"
+      fps_scale:
+        description: "Множитель скорости анимации (1.0 = как в FRM)"
+        required: true
+        default: "1.0"
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pillow
+
+      - name: Run converter
+        env:
+          SRC: ${{ github.event.inputs.source_dir }}
+          DST: ${{ github.event.inputs.dest_dir }}
+          SPLIT_DIRS: ${{ github.event.inputs.split_dirs }}
+          FPS_SCALE: ${{ github.event.inputs.fps_scale }}
+        run: |
+          python .github/scripts/fr_to_gif.py \
+            --src "$SRC" \
+            --dst "$DST" \
+            --split-dirs "$SPLIT_DIRS" \
+            --fps-scale "$FPS_SCALE"
+
+      - name: Commit GIFs
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add "${{ github.event.inputs.dest_dir }}" || true
+          git commit -m "Convert FR/FRM to GIF (palette-based)" || echo "No changes"
+          git push || true
