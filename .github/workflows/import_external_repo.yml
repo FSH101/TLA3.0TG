@@ -1,27 +1,78 @@
+name: Import files from another GitHub repo (copy, no history)
+
+on:
+  workflow_dispatch:
+    inputs:
+      # — откуда тянуть —
+      source_repo:
+        description: "owner/name исходного репозитория"
+        required: true
+        default: "SacredCracker/FOnline-TlaMk2"
+      source_ref:
+        description: "Ветка/тег/коммит исходника"
+        required: true
+        default: "2012-old-version"
+      # Можно указать одну или несколько строк для sparse-checkout (ускоряет):
+      # Примеры:
+      #   Server/**
+      #   Server/maps/**
+      #   Server/proto/**
+      sparse_paths:
+        description: "Строки sparse-checkout (оставь пустым, чтобы взять всё)"
+        required: false
+        default: |
+
+      # — куда складывать у тебя —
+      dest_path:
+        description: "Папка в этом репо, куда положить файлы"
+        required: true
+        default: "external/FOnline-TlaMk2"
+
+      # — в какую ветку коммитить —
+      target_branch:
+        description: "Ветка в этом репо для коммита"
+        required: true
+        default: "import-fonline"
+
+      commit_message:
+        description: "Текст коммита"
+        required: true
+        default: "Import from external repo"
+
+      # Если исходник приватный — положи PAT в секрет SOURCE_REPO_TOKEN и включи true
+      use_private_token:
+        description: "Использовать secrets.SOURCE_REPO_TOKEN для приватного репо (true/false)"
+        required: false
+        default: "false"
+
 jobs:
   import:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
-      # 1) Чекаутим ТВОЁ репо и переключаемся на целевую ветку (ТОЛЬКО 1 КОММИТ)
-      - name: Checkout this repo (shallow, single branch)
+      # 0) Чекаут твоего репо (легковесно) и переключение/создание целевой ветки
+      - name: Checkout this repo (shallow)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.target_branch }}  # только целевая ветка
-          fetch-depth: 1                                  # только верхний коммит
-          fetch-tags: false                               # без тегов
-          filter: blob:none                               # без blob-данных (ускоряет, git 2.41+ на раннерах ок)
-          # submodules: false                            # по умолчанию false
+          fetch-depth: 1
+          ref: ${{ github.event.inputs.target_branch }}
 
-      # (опционально) если надо гарантированно развязать "blob:none" перед записью файлов:
-      - name: Ensure blobs for working tree (optional)
+      - name: Create branch if not exists
+        shell: bash
         run: |
-          git config --local remote.origin.promisor false || true
-          git config --local core.sparseCheckout false || true
+          set -e
+          BR="${{ github.event.inputs.target_branch }}"
+          if ! git rev-parse --verify --quiet "origin/$BR"; then
+            git checkout -b "$BR"
+          else
+            git checkout "$BR"
+            git pull --ff-only
+          fi
 
-      # 2) Чекаутим ИСТОЧНИК в подпапку _src (ТОЛЬКО НУЖНАЯ ВЕТКА/ПУТИ)
-      - name: Checkout source repo (shallow, filtered)
+      # 1) Чекаут исходного репо в _src (шallow + sparse, чтобы не тянуть лишнее)
+      - name: Checkout source repo (sparse if paths provided)
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.inputs.source_repo }}
@@ -29,48 +80,27 @@ jobs:
           path: _src
           fetch-depth: 1
           fetch-tags: false
-          filter: blob:none
-          # Если нужен только один каталог/глоб из исходника — включи sparse-checkout:
-          # sparse-checkout: |
-          #   ${{ github.event.inputs.source_path }}
-          #   # можно несколько строк
-          # token: ${{ secrets.SOURCE_REPO_TOKEN }}  # если приватный исходник
+          # Если исходник приватный:
+          token: ${{ github.event.inputs.use_private_token == 'true' && secrets.SOURCE_REPO_TOKEN || '' }}
+          # Sparse-checkout, если указаны пути
+          sparse-checkout: ${{ github.event.inputs.sparse_paths }}
+          sparse-checkout-cone: false
 
-      # 3) Копируем нужные файлы
-      - name: Copy files
+      # 2) Копируем файлы к тебе
+      - name: Copy files into destination
         shell: bash
         run: |
           set -e
           DEST="${{ github.event.inputs.dest_path }}"
-          SRCSEL="${{ github.event.inputs.source_path }}"
           mkdir -p "$DEST"
-
-          if [ -z "$SRCSEL" ]; then
-            rsync -a --delete --exclude ".git/" "_src/" "$DEST/"
-          else
-            shopt -s globstar nullglob
-            if [ -d "_src/$SRCSEL" ]; then
-              rsync -a --delete "_src/$SRCSEL/" "$DEST/"
-            else
-              mkdir -p "$DEST"
-              for f in _src/$SRCSEL; do
-                [ -e "$f" ] || continue
-                if [ -d "$f" ]; then
-                  rsync -a "$f/" "$DEST/$(basename "$f")/"
-                else
-                  mkdir -p "$DEST/$(dirname "${f#_src/}")"
-                  cp -a "$f" "$DEST/$(dirname "${f#_src/}")/"
-                fi
-              done
-            fi
-          fi
+          rsync -a --delete --exclude ".git/" "_src/" "$DEST/"
 
           echo "Imported into: $DEST"
-          # избегаем Broken pipe
+          # Без pipefail/pipe — чтобы не падало из-за Broken pipe
           find "$DEST" -mindepth 1 -maxdepth 5 -print > .import_list.txt || true
           head -n 100 .import_list.txt || true
 
-      # 4) Коммитим изменения
+      # 3) Коммит и пуш
       - name: Commit & push
         shell: bash
         run: |
@@ -79,4 +109,4 @@ jobs:
           git config user.email "actions@github.com"
           git add -A
           git commit -m "${{ github.event.inputs.commit_message }}" || echo "No changes"
-          git push
+          git push --set-upstream origin "${{ github.event.inputs.target_branch }}"
