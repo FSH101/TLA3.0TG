@@ -1,0 +1,5 @@
+{
+  "floor": "https://cdn.example.com/tiles/floor_v1.png",
+  "doorClosed": "https://cdn.example.com/props/door_closed_v1.png",
+  "doorOpen": "https://cdn.example.com/props/door_open_v1.png"
+}
