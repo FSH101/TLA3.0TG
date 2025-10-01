@@ -26,6 +26,8 @@ interface MapObject {
   elev: number;
   dir: number;
   art: string;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 interface MapData {
@@ -266,14 +268,17 @@ function computeDrawMetrics(
     r: number,
     image: HTMLImageElement,
     art: string,
-    elev = 0,
+    options?: { elev?: number; offsetX?: number; offsetY?: number },
   ) => {
     const asset = getAssetInfo(map, art);
+    const elev = options?.elev ?? 0;
     const base = projectHex(q, r, map.hex, elev);
     const anchorX = asset?.anchorAvg.xOff ?? 0;
     const anchorY = asset?.anchorAvg.yOff ?? 0;
-    const rawX = base.x + anchorX - image.width / 2;
-    const rawY = base.y + anchorY - image.height;
+    const offsetX = options?.offsetX ?? 0;
+    const offsetY = options?.offsetY ?? 0;
+    const rawX = base.x + offsetX + anchorX - image.width / 2;
+    const rawY = base.y + offsetY + anchorY - image.height;
     const drawX = Math.round(rawX);
     const drawY = Math.round(rawY);
     minX = Math.min(minX, drawX);
@@ -301,7 +306,11 @@ function computeDrawMetrics(
     if (!img) {
       continue;
     }
-    pushDrawable('object', object.q, object.r, img, object.art, object.elev ?? 0);
+    pushDrawable('object', object.q, object.r, img, object.art, {
+      elev: object.elev ?? 0,
+      offsetX: object.offsetX ?? 0,
+      offsetY: object.offsetY ?? 0,
+    });
   }
 
   return {

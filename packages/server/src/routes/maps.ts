@@ -16,7 +16,16 @@ interface StoredMapData {
   };
   size: { w: number; h: number };
   tiles: { q: number; r: number; layer: 'ground' | 'roof'; art: string }[];
-  objects: { id: string; q: number; r: number; elev: number; dir: number; art: string }[];
+  objects: {
+    id: string;
+    q: number;
+    r: number;
+    elev: number;
+    dir: number;
+    art: string;
+    offsetX?: number;
+    offsetY?: number;
+  }[];
 }
 
 interface MapSummary {

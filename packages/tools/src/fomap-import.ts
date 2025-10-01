@@ -32,6 +32,8 @@ export interface MapObject {
   dir: number;
   art: string;
   block: boolean;
+  offsetX: number;
+  offsetY: number;
 }
 
 export interface SpawnPoint {
@@ -165,6 +167,8 @@ export async function importFomap(
     const elev = toNumber(values.MapElev ?? values.MapZ ?? values.Elev);
     const dir = toNumber(values.Dir ?? values.Angle) % 6;
     const id = values.Id ?? `o${objects.length + 1}`;
+    const offsetX = toNumber(values.OffsetX ?? values.OffsX, 0);
+    const offsetY = toNumber(values.OffsetY ?? values.OffsY, 0);
 
     objects.push({
       id,
@@ -174,6 +178,8 @@ export async function importFomap(
       dir,
       art: artInfo.art,
       block: artInfo.block,
+      offsetX,
+      offsetY,
     });
 
     currentObject = null;
