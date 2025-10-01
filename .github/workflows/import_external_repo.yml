@@ -28,7 +28,7 @@ on:
         required: true
         default: "Import from external repo"
       use_private_token:
-        description: "Для приватного исходника используем secrets.SOURCE_REPO_TOKEN (true/false)"
+        description: "Для приватного исходника использовать secrets.SOURCE_REPO_TOKEN (true/false)"
         required: false
         default: "false"
 
@@ -39,37 +39,33 @@ jobs:
       contents: write
 
     steps:
-      # 0) Чекаутим ЭТО репо на ДЕФОЛТНУЮ ветку (НЕ target_branch!)
+      # 0) Чекаут дефолтной ветки ЭТОГО репо
       - name: Checkout this repo (default branch, shallow)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           fetch-tags: false
-          # ref НЕ указываем, тогда возьмётся default-ветка репо
 
-      # 0.1) Создаём/переключаемся на target_branch от дефолтной
+      # 0.1) Создаём/переключаемся на target_branch
       - name: Create or switch to target branch
         shell: bash
         run: |
           set -e
           BR="${{ github.event.inputs.target_branch }}"
-          # определяем дефолтную ветку origin (main/master)
           DEF=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
           if [ -z "$DEF" ]; then
             if git ls-remote --exit-code --heads origin main >/dev/null 2>&1; then DEF=main; else DEF=master; fi
           fi
-          echo "Default branch detected: $DEF"
-          git fetch --depth=1 origin "$DEF"
+          echo "Default branch: $DEF"
+          git fetch --depth=1 origin "$DEF" || true
           if git ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then
-            # ветка уже существует на origin — переключаемся на неё
-            git fetch --depth=1 origin "$BR"
-            git checkout -B "$BR" "origin/$BR"
+            git fetch --depth=1 origin "$BR" || true
+            git checkout -B "$BR" "origin/$BR" || git checkout -B "$BR"
           else
-            # ветки ещё нет — создаём от дефолтной
-            git checkout -B "$BR" "origin/$DEF"
+            git checkout -B "$BR" "origin/$DEF" || git checkout -B "$BR"
           fi
 
-      # 1) Чекаут исходного репо в _src (шаллоу + опционально sparse)
+      # 1) Чекаут исходного репо в _src (sparse по желанию)
       - name: Checkout source repo (sparse if paths provided)
         uses: actions/checkout@v4
         with:
@@ -78,9 +74,10 @@ jobs:
           path: _src
           fetch-depth: 1
           fetch-tags: false
-          token: ${{ github.event.inputs.use_private_token == 'true' && secrets.SOURCE_REPO_TOKEN || '' }}
+          # ПУБЛИЧНЫЕ: хватит github.token; ПРИВАТНЫЕ: положи PAT в secrets.SOURCE_REPO_TOKEN и переключи флаг ниже
+          token: ${{ github.event.inputs.use_private_token == 'true' && secrets.SOURCE_REPO_TOKEN || github.token }}
           sparse-checkout: ${{ github.event.inputs.sparse_paths }}
-          sparse-checkout-cone: false
+          sparse-checkout-cone-mode: false
 
       # 2) Копируем файлы
       - name: Copy files into destination
@@ -92,7 +89,7 @@ jobs:
           rsync -a --delete --exclude ".git/" "_src/" "$DEST/"
 
           echo "Imported into: $DEST"
-          # Без пайпов, чтобы не ловить Broken pipe
+          # Без пайпов -> без Broken pipe
           find "$DEST" -mindepth 1 -maxdepth 5 -print > .import_list.txt || true
           head -n 100 .import_list.txt || true
 
@@ -105,4 +102,4 @@ jobs:
           git config user.email "actions@github.com"
           git add -A
           git commit -m "${{ github.event.inputs.commit_message }}" || echo "No changes"
-          git push --set-upstream origin "${{ github.event.inputs.target_branch }}"
+          git push --set-upstream origin "${{ github.event.inputs.target_branch }}" || git push -u origin "${{ github.event.inputs.target_branch }}"
