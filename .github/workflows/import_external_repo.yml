@@ -79,7 +79,9 @@ jobs:
             fi
           fi
           echo "Imported into: $DEST"
-          find "$DEST" | head -n 100
+          # избегаем Broken pipe: сначала в файл, потом head
+          find "$DEST" -mindepth 1 -maxdepth 5 -print > .import_list.txt || true
+          head -n 100 .import_list.txt || true
 
       # 4) Коммитим изменения
       - name: Commit & push
