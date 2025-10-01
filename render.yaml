@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: tla3-server
+    env: node
+    plan: free
+    region: oregon
+    nodeVersion: 20
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BASE_URL
+        value: https://tla3-server.onrender.com
+      - key: CORS_ORIGIN
+        value: https://tla3-server.onrender.com
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ACCESS_TTL_SEC
+        value: 900
+      - key: REFRESH_TTL_SEC
+        value: 2592000
+      - key: PASSWORD_SALT_ROUNDS
+        value: 12
+      - key: DB_PROVIDER
+        value: postgresql
+      - key: DB_URL
+        fromDatabase:
+          name: tla3-postgres
+          property: connectionString
+    disk:
+      name: tla3-art-cache
+      mountPath: /opt/render/project/src/assets
+      sizeGB: 1
+databases:
+  - name: tla3-postgres
+    region: oregon
+    plan: free
+    databaseName: tla3
+    user: tla3
