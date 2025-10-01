@@ -3,6 +3,8 @@ import path from 'node:path';
 import type { Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
 
+import { assetIndex } from './assets-index';
+
 const publicArtDir = path.resolve('packages', 'client', 'public', 'art');
 const originalArtDir = path.resolve('assets_1', 'art');
 
@@ -35,8 +37,29 @@ artRouter.get('/*', (req: Request, res: Response, next: NextFunction) => {
     return;
   }
 
+  const resolvedAsset = resolveImportedAsset(safeRelativePath);
+  if (resolvedAsset) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.sendFile(resolvedAsset);
+    return;
+  }
+
   res.sendStatus(404);
 });
+
+function resolveImportedAsset(relativePath: string): string | null {
+  const normalized = path.posix.normalize(relativePath).replace(/^\/+/, '');
+  const match = normalized.match(/^(?<art>.+?)\/dir_(?<dir>\d+)\/frame_(?<frame>\d+)\.png$/i);
+  if (!match || !match.groups) {
+    return null;
+  }
+
+  const art = match.groups.art;
+  const dir = Number.parseInt(match.groups.dir ?? '0', 10);
+  const frame = Number.parseInt(match.groups.frame ?? '0', 10);
+
+  return assetIndex.resolveFramePath(art, dir, frame);
+}
 
 function toSafeRelativePath(requested: string): string | null {
   if (!requested) {
