@@ -156,8 +156,10 @@ function getPixelMetrics(hex: HexGridInfo): HexPixelMetrics {
 function projectHex(q: number, r: number, hex: HexGridInfo, elev = 0): { x: number; y: number } {
   const metrics = getPixelMetrics(hex);
   if (hex.orientation === 'isometric') {
-    const x = (q - r) * (metrics.tileWidth / 2);
-    const y = (q + r) * (metrics.tileHeight / 2) - elev * metrics.elevation;
+    const isoQ = q / 2;
+    const isoR = r / 2;
+    const x = (isoQ - isoR) * (metrics.tileWidth / 2);
+    const y = (isoQ + isoR) * (metrics.tileHeight / 2) - elev * metrics.elevation;
     return { x, y };
   }
 
