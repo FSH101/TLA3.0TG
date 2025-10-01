@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Router } from 'express';
 
@@ -22,8 +23,10 @@ interface MapSummary {
   objects: number;
 }
 
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(moduleDir, '../../../..');
+const mapsDir = path.join(repoRoot, 'assets', 'maps');
 const mapsRouter = Router();
-const mapsDir = path.resolve('assets', 'maps');
 
 mapsRouter.get('/', async (_req, res, next) => {
   try {

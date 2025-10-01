@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface AssetMapEntry {
   id: string;
@@ -23,8 +24,10 @@ interface AssetInfo {
   anchorAvg: { xOff: number; yOff: number };
 }
 
-const ASSET_MAP_PATH = path.resolve('assets', 'asset_map.json');
-const ASSET_ROOT = path.resolve('assets');
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(moduleDir, '../../..');
+const ASSET_ROOT = path.resolve(repoRoot, 'assets');
+const ASSET_MAP_PATH = path.join(ASSET_ROOT, 'asset_map.json');
 
 function normalizeKey(input: string): string {
   const normalized = input.replace(/\\+/g, '/');
