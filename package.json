@@ -1,0 +1,30 @@
+{
+  "name": "tla3-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm -w packages/server run dev",
+    "build": "npm -w packages/client run build && npm -w packages/server run build",
+    "start": "node packages/server/dist/index.js",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc -b packages/*",
+    "test": "vitest run",
+    "tools:import-map": "tsx packages/tools/import-map.ts",
+    "tools:import-all": "tsx packages/tools/import-all.ts"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.9.0",
+    "@typescript-eslint/parser": "^7.9.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "fast-glob": "^3.3.3",
+    "prettier": "^3.2.5",
+    "tslib": "^2.6.2",
+    "tsx": "^4.7.1",
+    "typescript": "5.4.5",
+    "vitest": "^1.5.0"
+  }
+}

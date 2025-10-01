@@ -1,0 +1,16 @@
+# бинарники/минифицированное — не строить diff
+*.frm   -diff
+*.fr?   -diff
+*.gif   -diff
+*.png   -diff
+*.jpg   -diff
+*.jpeg  -diff
+*.webp  -diff
+*.pal   -diff
+*.dat   -diff
+*.zip   -diff
+*.7z    -diff
+*.min.* -diff
+
+# текст нормализуем
+* text=auto eol=lf

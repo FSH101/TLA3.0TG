@@ -1,0 +1,28 @@
+name: Import maps from FOnline to JSON
+
+on:
+  workflow_dispatch:
+    inputs:
+      map_glob:
+        description: "Glob для .fomap (от external/...)"
+        default: "external/FOnline-TlaMk2/Server/maps/**/*.fomap"
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run tools:import-all -- ${{ github.event.inputs.map_glob }}
+      - name: Commit maps
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add assets/maps || true
+          git commit -m "Import maps JSON" || echo "No changes"
+          git push

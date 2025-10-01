@@ -1,0 +1,16 @@
+# deps/build
+node_modules/
+dist/
+.build/
+.cache/
+.vite/
+*.log
+.env
+.env.*
+*.DS_Store
+
+# big assets (не коммитим, подтягиваем на CI/в рантайме)
+assets_1/
+assets/_cache/
+assets/_tmp/
+packages/client/public/art/
