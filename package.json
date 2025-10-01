@@ -1,0 +1,20 @@
+{
+  "name": "tla3.0tg",
+  "version": "0.1.0",
+  "description": "Web port scaffolding for TLAMK2 server mechanics",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.4",
+    "vite": "^5.2.0"
+  }
+}
