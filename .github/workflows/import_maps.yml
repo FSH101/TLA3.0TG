@@ -1,28 +1,53 @@
-name: Import maps from FOnline to JSON
+name: Import maps
 
 on:
   workflow_dispatch:
     inputs:
       map_glob:
-        description: "Glob для .fomap (от external/...)"
-        default: "external/FOnline-TlaMk2/Server/maps/**/*.fomap"
+        description: "Glob для .fomap файлов (от external/...)"
+        required: true
+        default: external/FOnline-TlaMk2/Server/maps/**/*.fomap
+      target_branch:
+        description: "Ветка, в которую коммитим изменения"
+        required: true
+        default: main
+
+permissions:
+  contents: write
 
 jobs:
   import:
     runs-on: ubuntu-latest
+    concurrency:
+      group: import-maps-${{ inputs.target_branch }}
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 1
-      - uses: actions/setup-node@v4
+          ref: ${{ inputs.target_branch }}
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npm run tools:import-all -- ${{ github.event.inputs.map_glob }}
-      - name: Commit maps
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Import map JSON assets
+        run: npm run tools:import-all -- "${{ inputs.map_glob }}"
+
+      - name: Commit and push map updates
         run: |
+          set -euo pipefail
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add assets/maps || true
-          git commit -m "Import maps JSON" || echo "No changes"
-          git push
+          if git status --short | grep -q '^'; then
+            git add assets/maps
+            git commit -m "Import maps JSON"
+            git push origin ${{ inputs.target_branch }}
+          else
+            echo "No changes to commit"
+          fi
