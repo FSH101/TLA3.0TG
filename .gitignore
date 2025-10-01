@@ -1,0 +1,31 @@
+# Node modules and build output
+node_modules
+*.log
+client/dist
+server/dist
+shared/dist
+*.tsbuildinfo
+
+# Environment and OS artifacts
+.DS_Store
+.env
+
+# Binary assets (store in external storage/CDN)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tga
+*.dds
+*.psd
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
