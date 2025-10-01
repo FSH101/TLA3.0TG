@@ -1,53 +1,40 @@
-name: Import files from another GitHub repo
-
-on:
-  workflow_dispatch:
-    inputs:
-      source_repo:
-        description: "owner/name исходного репозитория (напр., SacredCracker/FOnline-TlaMk2)"
-        required: true
-      source_ref:
-        description: "Ветка/тег/коммит исходника (напр., master)"
-        required: false
-        default: "master"
-      source_path:
-        description: "Что забирать из исходника (glob или папка; пусто = всё)"
-        required: false
-        default: ""
-      dest_path:
-        description: "Куда положить в этом репо (напр., vendor/FOnline-TlaMk2)"
-        required: false
-        default: "vendor/import"
-      target_branch:
-        description: "Ветка в этом репо, куда коммитить"
-        required: false
-        default: "main"
-      commit_message:
-        description: "Текст коммита"
-        required: false
-        default: "Import from external repository"
-
 jobs:
   import:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      # 1) Чекаутим ТВОЁ репо и переключаемся на целевую ветку
-      - uses: actions/checkout@v4
+      # 1) Чекаутим ТВОЁ репо и переключаемся на целевую ветку (ТОЛЬКО 1 КОММИТ)
+      - name: Checkout this repo (shallow, single branch)
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: ${{ github.event.inputs.target_branch }}
+          ref: ${{ github.event.inputs.target_branch }}  # только целевая ветка
+          fetch-depth: 1                                  # только верхний коммит
+          fetch-tags: false                               # без тегов
+          filter: blob:none                               # без blob-данных (ускоряет, git 2.41+ на раннерах ок)
+          # submodules: false                            # по умолчанию false
 
-      # 2) Чекаутим ИСТОЧНИК (в подпапку _src)
-      - name: Checkout source repo
+      # (опционально) если надо гарантированно развязать "blob:none" перед записью файлов:
+      - name: Ensure blobs for working tree (optional)
+        run: |
+          git config --local remote.origin.promisor false || true
+          git config --local core.sparseCheckout false || true
+
+      # 2) Чекаутим ИСТОЧНИК в подпапку _src (ТОЛЬКО НУЖНАЯ ВЕТКА/ПУТИ)
+      - name: Checkout source repo (shallow, filtered)
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.inputs.source_repo }}
           ref: ${{ github.event.inputs.source_ref }}
           path: _src
-          # Для приватных исходников раскомментируй строку ниже и положи PAT в секрет SOURCE_REPO_TOKEN (scope: repo)
-          # token: ${{ secrets.SOURCE_REPO_TOKEN }}
+          fetch-depth: 1
+          fetch-tags: false
+          filter: blob:none
+          # Если нужен только один каталог/глоб из исходника — включи sparse-checkout:
+          # sparse-checkout: |
+          #   ${{ github.event.inputs.source_path }}
+          #   # можно несколько строк
+          # token: ${{ secrets.SOURCE_REPO_TOKEN }}  # если приватный исходник
 
       # 3) Копируем нужные файлы
       - name: Copy files
@@ -57,15 +44,14 @@ jobs:
           DEST="${{ github.event.inputs.dest_path }}"
           SRCSEL="${{ github.event.inputs.source_path }}"
           mkdir -p "$DEST"
+
           if [ -z "$SRCSEL" ]; then
             rsync -a --delete --exclude ".git/" "_src/" "$DEST/"
           else
             shopt -s globstar nullglob
-            # Поддержка «папка» ИЛИ «glob»
             if [ -d "_src/$SRCSEL" ]; then
               rsync -a --delete "_src/$SRCSEL/" "$DEST/"
             else
-              # сбор по glob-маске
               mkdir -p "$DEST"
               for f in _src/$SRCSEL; do
                 [ -e "$f" ] || continue
@@ -78,8 +64,9 @@ jobs:
               done
             fi
           fi
+
           echo "Imported into: $DEST"
-          # избегаем Broken pipe: сначала в файл, потом head
+          # избегаем Broken pipe
           find "$DEST" -mindepth 1 -maxdepth 5 -print > .import_list.txt || true
           head -n 100 .import_list.txt || true
 
