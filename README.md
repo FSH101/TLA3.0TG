@@ -11,3 +11,15 @@ The project is being developed as a TypeScript-first monorepo with the following
 - CI/CD coverage (lint, typecheck, build) and Render deployment for an always-on preview environment.
 
 Refer to the task checklist to see the planned implementation order (import tooling and runtime FRM decoder come first), and consult the development log for status updates and next steps.
+
+## Getting started
+
+1. Install dependencies: `npm install`.
+2. Copy `packages/server/.env.example` to `packages/server/.env` and adjust values for your environment (set `DB_PROVIDER`/`DB_URL` accordingly).
+3. Run the development server with `npm run dev` (currently starts the Express backend skeleton).
+
+Useful scripts:
+
+- `npm run lint` — ESLint across the monorepo.
+- `npm run typecheck` — TypeScript project references build (`packages/*`).
+- `npm run build` — placeholder client build + TypeScript compilation for the server.

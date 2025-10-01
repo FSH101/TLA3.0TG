@@ -3,10 +3,10 @@
 This document tracks the mandatory deliverables for the Fallout-inspired web remake MVP, broken down into focused pull requests so the work can proceed incrementally while keeping CI green.
 
 ## Repository scaffolding
-- [ ] Establish npm workspaces with packages for `server`, `client`, `shared`, and `tools`.
-- [ ] Add strict TypeScript configs, ESLint, Prettier, and the shared `.gitignore` rules.
+- [x] Establish npm workspaces with packages for `server`, `client`, `shared`, and `tools`.
+- [x] Add strict TypeScript configs, ESLint, Prettier, and the shared `.gitignore` rules.
 - [ ] Provide Render deployment config (`render.yaml`) and GitHub Actions workflows for CI and map importing.
-- [ ] Populate `packages/server/.env.example` with all required environment variables.
+- [x] Populate `packages/server/.env.example` with all required environment variables.
 
 ## Tools: map and asset import
 - [ ] Implement `.fomap` parser (`packages/tools/fomap-import.ts`) producing structured map data.
@@ -22,7 +22,7 @@ This document tracks the mandatory deliverables for the Fallout-inspired web rem
 - [ ] Cover edge cases with decoder unit tests.
 
 ## Server platform
-- [ ] Wire Express HTTP server with static asset routing (including `/art/**` fallbacks to original assets).
+- [x] Wire Express HTTP server with static asset routing (including `/art/**` fallbacks to original assets).
 - [ ] Expose health, map list, and map detail REST endpoints.
 - [ ] Implement authentication stack (register, login, refresh, logout, me) with Prisma, bcrypt, JWT, cookie refresh tokens, rate limiting, and Zod validation.
 - [ ] Set up WebSocket endpoint `/ws` implementing the specified protocol and in-memory world state.

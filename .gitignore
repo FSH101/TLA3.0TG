@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.log
+*.DS_Store
+packages/client/.vite/
+packages/client/dist/
+packages/server/dist/
+assets/_cache/
+assets/_tmp/
