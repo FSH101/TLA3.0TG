@@ -3,8 +3,13 @@ import { promises as fs } from 'node:fs';
 import { ProtoResolver, ProtoLookupResult } from './proto-resolve.js';
 
 export interface HexSpec {
-  orientation: 'pointy';
+  orientation: 'pointy' | 'isometric';
   size: number;
+  pixel: {
+    tileWidth: number;
+    tileHeight: number;
+    elevation: number;
+  };
 }
 
 export interface MapSize {
@@ -50,6 +55,9 @@ interface ObjectAccumulator {
 }
 
 const DEFAULT_HEX_SIZE = 28;
+const FALLBACK_TILE_WIDTH = 80;
+const FALLBACK_TILE_HEIGHT = 36;
+const FALLBACK_ELEVATION_STEP = 96;
 const DEFAULT_SPAWN: SpawnPoint = { tag: 'player_spawn', q: 0, r: 0, elev: 0 };
 
 const SECTION_HEADER = 'header';
@@ -260,7 +268,15 @@ export async function importFomap(
 
   return {
     id,
-    hex: { orientation: 'pointy', size: hexSize },
+    hex: {
+      orientation: 'isometric',
+      size: hexSize,
+      pixel: {
+        tileWidth: FALLBACK_TILE_WIDTH,
+        tileHeight: FALLBACK_TILE_HEIGHT,
+        elevation: FALLBACK_ELEVATION_STEP,
+      },
+    },
     size: { w: width, h: height },
     tiles,
     objects,

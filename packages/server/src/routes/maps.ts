@@ -9,7 +9,11 @@ import { assetIndex, type AssetInfo } from '../assets-index';
 interface StoredMapData {
   id: string;
   name?: string;
-  hex: { orientation: 'pointy' | 'flat'; size: number };
+  hex: {
+    orientation: 'pointy' | 'flat' | 'isometric';
+    size: number;
+    pixel?: { tileWidth: number; tileHeight: number; elevation: number };
+  };
   size: { w: number; h: number };
   tiles: { q: number; r: number; layer: 'ground' | 'roof'; art: string }[];
   objects: { id: string; q: number; r: number; elev: number; dir: number; art: string }[];

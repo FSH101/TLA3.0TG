@@ -1,8 +1,15 @@
 import './style.css';
 
+interface HexPixelMetrics {
+  tileWidth: number;
+  tileHeight: number;
+  elevation: number;
+}
+
 interface HexGridInfo {
-  orientation: 'pointy' | 'flat';
+  orientation: 'pointy' | 'flat' | 'isometric';
   size: number;
+  pixel?: HexPixelMetrics;
 }
 
 interface MapTile {
@@ -130,9 +137,39 @@ select.addEventListener('change', (event: Event) => {
   }
 });
 
-function axialToPixel(q: number, r: number, size: number): { x: number; y: number } {
+const ISO_DEFAULT_METRICS: HexPixelMetrics = { tileWidth: 80, tileHeight: 36, elevation: 96 };
+
+function getPixelMetrics(hex: HexGridInfo): HexPixelMetrics {
+  if (hex.pixel) {
+    return hex.pixel;
+  }
+  if (hex.orientation === 'isometric') {
+    return ISO_DEFAULT_METRICS;
+  }
+  const baseSize = Math.max(1, hex.size);
+  const tileWidth = Math.sqrt(3) * baseSize;
+  const tileHeight = 2 * baseSize;
+  const elevation = tileHeight * 1.5;
+  return { tileWidth, tileHeight, elevation };
+}
+
+function projectHex(q: number, r: number, hex: HexGridInfo, elev = 0): { x: number; y: number } {
+  const metrics = getPixelMetrics(hex);
+  if (hex.orientation === 'isometric') {
+    const x = (q - r) * (metrics.tileWidth / 2);
+    const y = (q + r) * (metrics.tileHeight / 2) - elev * metrics.elevation;
+    return { x, y };
+  }
+
+  const size = Math.max(1, hex.size);
+  if (hex.orientation === 'flat') {
+    const x = size * (3 / 2) * q;
+    const y = size * Math.sqrt(3) * (r + q / 2) - elev * metrics.elevation;
+    return { x, y };
+  }
+
   const x = size * Math.sqrt(3) * (q + r / 2);
-  const y = size * (3 / 2) * r;
+  const y = size * (3 / 2) * r - elev * metrics.elevation;
   return { x, y };
 }
 
@@ -221,8 +258,6 @@ function computeDrawMetrics(
   let maxX = Number.NEGATIVE_INFINITY;
   let maxY = Number.NEGATIVE_INFINITY;
 
-  const { size: hexSize } = map.hex;
-
   const pushDrawable = (
     layer: 'ground' | 'roof' | 'object',
     q: number,
@@ -232,7 +267,7 @@ function computeDrawMetrics(
     elev = 0,
   ) => {
     const asset = getAssetInfo(map, art);
-    const base = axialToPixel(q, r, hexSize);
+    const base = projectHex(q, r, map.hex, elev);
     const anchorX = asset?.anchorAvg.xOff ?? 0;
     const anchorY = asset?.anchorAvg.yOff ?? 0;
     const drawX = base.x + anchorX - image.width / 2;
@@ -241,7 +276,7 @@ function computeDrawMetrics(
     minY = Math.min(minY, drawY);
     maxX = Math.max(maxX, drawX + image.width);
     maxY = Math.max(maxY, drawY + image.height);
-    const z = layer === 'object' ? elev * 1000 + r * 10 + q : r * 10 + q;
+    const z = base.y;
     drawables.push({ layer, x: drawX, y: drawY, z, image, art });
   };
 
