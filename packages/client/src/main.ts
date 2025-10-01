@@ -270,8 +270,10 @@ function computeDrawMetrics(
     const base = projectHex(q, r, map.hex, elev);
     const anchorX = asset?.anchorAvg.xOff ?? 0;
     const anchorY = asset?.anchorAvg.yOff ?? 0;
-    const drawX = base.x + anchorX - image.width / 2;
-    const drawY = base.y + anchorY - image.height;
+    const rawX = base.x + anchorX - image.width / 2;
+    const rawY = base.y + anchorY - image.height;
+    const drawX = Math.round(rawX);
+    const drawY = Math.round(rawY);
     minX = Math.min(minX, drawX);
     minY = Math.min(minY, drawY);
     maxX = Math.max(maxX, drawX + image.width);
@@ -342,6 +344,7 @@ async function renderCurrentMap(): Promise<void> {
 
   ctx.resetTransform();
   ctx.scale(dpr, dpr);
+  ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, width, height);
 
   const offsetX = -bounds.minX + padding;

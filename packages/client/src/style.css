@@ -58,7 +58,8 @@ body {
 .viewer canvas {
   display: block;
   margin: 0 auto;
-  background: #07090c;
+  background: transparent;
+  image-rendering: pixelated;
 }
 
 .status {
