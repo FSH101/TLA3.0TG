@@ -1,0 +1,93 @@
+name: Import files from another GitHub repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: "owner/name исходного репозитория (напр., SacredCracker/FOnline-TlaMk2)"
+        required: true
+      source_ref:
+        description: "Ветка/тег/коммит исходника (напр., master)"
+        required: false
+        default: "master"
+      source_path:
+        description: "Что забирать из исходника (glob или папка; пусто = всё)"
+        required: false
+        default: ""
+      dest_path:
+        description: "Куда положить в этом репо (напр., vendor/FOnline-TlaMk2)"
+        required: false
+        default: "vendor/import"
+      target_branch:
+        description: "Ветка в этом репо, куда коммитить"
+        required: false
+        default: "main"
+      commit_message:
+        description: "Текст коммита"
+        required: false
+        default: "Import from external repository"
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # 1) Чекаутим ТВОЁ репо и переключаемся на целевую ветку
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.target_branch }}
+
+      # 2) Чекаутим ИСТОЧНИК (в подпапку _src)
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          ref: ${{ github.event.inputs.source_ref }}
+          path: _src
+          # Для приватных исходников раскомментируй строку ниже и положи PAT в секрет SOURCE_REPO_TOKEN (scope: repo)
+          # token: ${{ secrets.SOURCE_REPO_TOKEN }}
+
+      # 3) Копируем нужные файлы
+      - name: Copy files
+        shell: bash
+        run: |
+          set -e
+          DEST="${{ github.event.inputs.dest_path }}"
+          SRCSEL="${{ github.event.inputs.source_path }}"
+          mkdir -p "$DEST"
+          if [ -z "$SRCSEL" ]; then
+            rsync -a --delete --exclude ".git/" "_src/" "$DEST/"
+          else
+            shopt -s globstar nullglob
+            # Поддержка «папка» ИЛИ «glob»
+            if [ -d "_src/$SRCSEL" ]; then
+              rsync -a --delete "_src/$SRCSEL/" "$DEST/"
+            else
+              # сбор по glob-маске
+              mkdir -p "$DEST"
+              for f in _src/$SRCSEL; do
+                [ -e "$f" ] || continue
+                if [ -d "$f" ]; then
+                  rsync -a "$f/" "$DEST/$(basename "$f")/"
+                else
+                  mkdir -p "$DEST/$(dirname "${f#_src/}")"
+                  cp -a "$f" "$DEST/$(dirname "${f#_src/}")/"
+                fi
+              done
+            fi
+          fi
+          echo "Imported into: $DEST"
+          find "$DEST" | head -n 100
+
+      # 4) Коммитим изменения
+      - name: Commit & push
+        shell: bash
+        run: |
+          set -e
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "${{ github.event.inputs.commit_message }}" || echo "No changes"
+          git push
