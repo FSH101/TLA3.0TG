@@ -1,51 +1,52 @@
-# Project Task Checklist
+# Чек-лист задач проекта
 
-This document tracks the mandatory deliverables for the Fallout-inspired web remake MVP, broken down into focused pull requests so the work can proceed incrementally while keeping CI green.
+Этот документ фиксирует обязательные результаты для MVP веб-ремейка Fallout, разбитые на отдельные pull request'ы,
+чтобы работа шла поэтапно при всегда зелёном CI.
 
-## Repository scaffolding
-- [x] Establish npm workspaces with packages for `server`, `client`, `shared`, and `tools`.
-- [x] Add strict TypeScript configs, ESLint, Prettier, and the shared `.gitignore` rules.
-- [ ] Provide Render deployment config (`render.yaml`) and GitHub Actions workflows for CI and map importing.
-- [x] Populate `packages/server/.env.example` with all required environment variables.
+## Структура репозитория
+- [x] Настроить npm workspaces с пакетами `server`, `client`, `shared` и `tools`.
+- [x] Добавить строгие конфиги TypeScript, ESLint, Prettier и общие правила `.gitignore`.
+- [ ] Подготовить конфиг Render (`render.yaml`) и GitHub Actions для CI и импорта карт.
+- [x] Заполнить `packages/server/.env.example` всеми необходимыми переменными окружения.
 
-## Tools: map and asset import
-- [x] Implement `.fomap` parser (`packages/tools/fomap-import.ts`) producing structured map data.
-- [x] Implement proto PID resolver (`packages/tools/proto-resolve.ts`).
-- [x] Build CLI importer (`packages/tools/import-map.ts`) that writes `assets/maps/<mapId>.json`.
-- [x] Provide `import-all` utility and npm scripts to batch-generate maps.
-- [ ] Add unit tests for the import tooling.
+## Тулы: импорт карт и ассетов
+- [x] Реализовать парсер `.fomap` (`packages/tools/fomap-import.ts`), возвращающий структурированные данные карты.
+- [x] Реализовать резолвер PID прототипов (`packages/tools/proto-resolve.ts`).
+- [x] Собрать CLI-импортёр (`packages/tools/import-map.ts`), который пишет `assets/maps/<mapId>.json`.
+- [x] Добавить утилиту `import-all` и npm-скрипты для пакетной генерации карт.
+- [ ] Написать модульные тесты для инструментов импорта.
 
-## Client runtime FR/FRM decoding
-- [ ] Add the canonical Fallout palette module.
-- [ ] Implement FRM decoder returning cached atlases with canvases per frame.
-- [ ] Integrate asset loading fallback chain (`.png|.gif` → `.frm|fr?`).
-- [ ] Cover edge cases with decoder unit tests.
+## Клиент: рантайм-декодирование FR/FRM
+- [ ] Добавить модуль с канонической палитрой Fallout.
+- [ ] Реализовать декодер FRM, возвращающий кэшируемые атласы с канвасами для каждого кадра.
+- [ ] Настроить цепочку загрузки ассетов (сначала `.png|.gif`, затем `.frm|fr?`).
+- [ ] Покрыть крайние случаи декодера модульными тестами.
 
-## Server platform
-- [x] Wire Express HTTP server with static asset routing (including `/art/**` fallbacks to original assets).
-- [ ] Expose health, map list, and map detail REST endpoints.
-- [ ] Implement authentication stack (register, login, refresh, logout, me) with Prisma, bcrypt, JWT, cookie refresh tokens, rate limiting, and Zod validation.
-- [ ] Set up WebSocket endpoint `/ws` implementing the specified protocol and in-memory world state.
-- [ ] Add shared networking types in `packages/shared/net.ts`.
-- [ ] Provide map loader cache and hex math helpers with unit tests.
+## Серверная платформа
+- [x] Подключить HTTP-сервер на Express со статикой и маршрутом `/art/**`, читающим оригинальные ассеты при отсутствии предконверта.
+- [ ] Открыть REST-эндпоинты для здоровья, списка карт и деталей карты.
+- [ ] Реализовать аутентификацию (register, login, refresh, logout, me) на Prisma, bcrypt, JWT, с refresh-cookie, rate limiting и проверкой через Zod.
+- [ ] Настроить WebSocket `/ws` со специфицированным протоколом и состоянием мира в памяти.
+- [ ] Вынести общие сетевые типы в `packages/shared/net.ts`.
+- [ ] Добавить кэш загрузчика карт и вспомогательные функции гекс-координат с тестами.
 
-## Client gameplay loop
-- [ ] Initialize Vite + PixiJS app rendering full-screen hex map with layers and Z-sorting.
-- [ ] Fetch map data and render ground, roof, objects, and players.
-- [ ] Implement FRM-driven character animations (idle/walk, 6 directions).
-- [ ] Add input handling for movement, turning, chat, and mobile fullscreen toggle.
-- [ ] Hook up WebSocket client to send/receive the defined protocol, including interpolation and ping overlay.
-- [ ] Add minimal UI for authentication and map selection.
+## Клиентский игровой цикл
+- [ ] Инициализировать приложение Vite + PixiJS с полноэкранным рендером гекс-карты, слоями и Z-сортировкой.
+- [ ] Получать данные карты и рисовать ground, roof, объекты и игроков.
+- [ ] Реализовать анимации персонажа на FRM (idle/walk, 6 направлений).
+- [ ] Добавить обработку ввода для перемещения, поворота, чата и мобильного полноэкранного режима.
+- [ ] Подключить WebSocket-клиент к протоколу: отправка/приём, интерполяция, оверлей пинга.
+- [ ] Добавить минимальный UI для аутентификации и выбора карты.
 
-## Deployment & quality gates
-- [ ] Ensure `npm run lint`, `npm run typecheck`, and `npm run build` succeed locally and in CI.
-- [ ] Document `npm run dev` and testing instructions in `README.md`.
-- [ ] Provide Render-ready start command and validate `/healthz`.
-- [ ] Create optional FR→PNG/GIF conversion workflow (`packages/tools/fr2gif.ts`) and GitHub Action trigger.
+## Деплой и контроль качества
+- [ ] Добиться успешного выполнения `npm run lint`, `npm run typecheck` и `npm run build` локально и в CI.
+- [ ] Задокументировать команды `npm run dev` и тестовый процесс в `README.md`.
+- [ ] Подготовить команду запуска для Render и убедиться, что `/healthz` отвечает 200.
+- [ ] Создать опциональный workflow конвертации FR→PNG/GIF (`packages/tools/fr2gif.ts`).
 
-## Post-MVP roadmap (for reference)
-- [ ] Pathfinding (A*) with occupied cell awareness.
-- [ ] Separate map instances/rooms and world persistence.
-- [ ] Combat systems, inventories, and scripted interactions.
-- [ ] Sprite atlases, batching, and FRM frame caching optimizations.
-- [ ] Optional Telegram Mini App authentication provider.
+## Дорожная карта после MVP (для справки)
+- [ ] Поиск пути (A*) с учётом занятых гексов.
+- [ ] Разделение на инстансы карт и сохранение состояния мира.
+- [ ] Боевая система, инвентарь и сценарные взаимодействия.
+- [ ] Спрайтовые атласы, батчинг и оптимизации кэширования кадров FRM.
+- [ ] Дополнительный провайдер авторизации через Telegram Mini App.
