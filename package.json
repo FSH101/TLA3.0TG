@@ -1,0 +1,15 @@
+{
+  "name": "tla-online",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "build": "npm run build -w shared && npm run build -w client && npm run build -w server",
+    "dev": "npm run dev -w server",
+    "lint": "npm run lint -w client"
+  }
+}
