@@ -3,7 +3,6 @@ name: Import files from another GitHub repo (copy, no history)
 on:
   workflow_dispatch:
     inputs:
-      # — откуда тянуть —
       source_repo:
         description: "owner/name исходного репозитория"
         required: true
@@ -12,36 +11,24 @@ on:
         description: "Ветка/тег/коммит исходника"
         required: true
         default: "2012-old-version"
-      # Можно указать одну или несколько строк для sparse-checkout (ускоряет):
-      # Примеры:
-      #   Server/**
-      #   Server/maps/**
-      #   Server/proto/**
       sparse_paths:
-        description: "Строки sparse-checkout (оставь пустым, чтобы взять всё)"
+        description: "Строки для sparse-checkout (оставь пустым, чтобы взять всё)"
         required: false
         default: |
-
-      # — куда складывать у тебя —
       dest_path:
-        description: "Папка в этом репо, куда положить файлы"
+        description: "Папка в ЭТОМ репо, куда сложить файлы"
         required: true
         default: "external/FOnline-TlaMk2"
-
-      # — в какую ветку коммитить —
       target_branch:
-        description: "Ветка в этом репо для коммита"
+        description: "Ветка ЭТОГО репо для коммита (создадим если нет)"
         required: true
         default: "import-fonline"
-
       commit_message:
         description: "Текст коммита"
         required: true
         default: "Import from external repo"
-
-      # Если исходник приватный — положи PAT в секрет SOURCE_REPO_TOKEN и включи true
       use_private_token:
-        description: "Использовать secrets.SOURCE_REPO_TOKEN для приватного репо (true/false)"
+        description: "Для приватного исходника используем secrets.SOURCE_REPO_TOKEN (true/false)"
         required: false
         default: "false"
 
@@ -52,26 +39,37 @@ jobs:
       contents: write
 
     steps:
-      # 0) Чекаут твоего репо (легковесно) и переключение/создание целевой ветки
-      - name: Checkout this repo (shallow)
+      # 0) Чекаутим ЭТО репо на ДЕФОЛТНУЮ ветку (НЕ target_branch!)
+      - name: Checkout this repo (default branch, shallow)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          ref: ${{ github.event.inputs.target_branch }}
+          fetch-tags: false
+          # ref НЕ указываем, тогда возьмётся default-ветка репо
 
-      - name: Create branch if not exists
+      # 0.1) Создаём/переключаемся на target_branch от дефолтной
+      - name: Create or switch to target branch
         shell: bash
         run: |
           set -e
           BR="${{ github.event.inputs.target_branch }}"
-          if ! git rev-parse --verify --quiet "origin/$BR"; then
-            git checkout -b "$BR"
+          # определяем дефолтную ветку origin (main/master)
+          DEF=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+          if [ -z "$DEF" ]; then
+            if git ls-remote --exit-code --heads origin main >/dev/null 2>&1; then DEF=main; else DEF=master; fi
+          fi
+          echo "Default branch detected: $DEF"
+          git fetch --depth=1 origin "$DEF"
+          if git ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then
+            # ветка уже существует на origin — переключаемся на неё
+            git fetch --depth=1 origin "$BR"
+            git checkout -B "$BR" "origin/$BR"
           else
-            git checkout "$BR"
-            git pull --ff-only
+            # ветки ещё нет — создаём от дефолтной
+            git checkout -B "$BR" "origin/$DEF"
           fi
 
-      # 1) Чекаут исходного репо в _src (шallow + sparse, чтобы не тянуть лишнее)
+      # 1) Чекаут исходного репо в _src (шаллоу + опционально sparse)
       - name: Checkout source repo (sparse if paths provided)
         uses: actions/checkout@v4
         with:
@@ -80,13 +78,11 @@ jobs:
           path: _src
           fetch-depth: 1
           fetch-tags: false
-          # Если исходник приватный:
           token: ${{ github.event.inputs.use_private_token == 'true' && secrets.SOURCE_REPO_TOKEN || '' }}
-          # Sparse-checkout, если указаны пути
           sparse-checkout: ${{ github.event.inputs.sparse_paths }}
           sparse-checkout-cone: false
 
-      # 2) Копируем файлы к тебе
+      # 2) Копируем файлы
       - name: Copy files into destination
         shell: bash
         run: |
@@ -96,7 +92,7 @@ jobs:
           rsync -a --delete --exclude ".git/" "_src/" "$DEST/"
 
           echo "Imported into: $DEST"
-          # Без pipefail/pipe — чтобы не падало из-за Broken pipe
+          # Без пайпов, чтобы не ловить Broken pipe
           find "$DEST" -mindepth 1 -maxdepth 5 -print > .import_list.txt || true
           head -n 100 .import_list.txt || true
 
