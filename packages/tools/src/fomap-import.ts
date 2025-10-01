@@ -110,6 +110,17 @@ function toNumber(value: string | undefined, fallback = 0): number {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+function toHex(value: string | undefined): number {
+  if (!value) {
+    return 0;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+  return Math.trunc(parsed / 2);
+}
+
 function resolveObjectArt(
   accumulator: Record<string, string>,
   pid: number | undefined,
@@ -152,6 +163,8 @@ export async function importFomap(
   let currentObject: ObjectAccumulator | null = null;
   let width = 0;
   let height = 0;
+  let maxQ = 0;
+  let maxR = 0;
 
   const pushObject = () => {
     if (!currentObject) {
@@ -162,8 +175,8 @@ export async function importFomap(
     const pid = pidRaw ? Number.parseInt(pidRaw, 10) : undefined;
     const protoInfo = typeof pid === 'number' && !Number.isNaN(pid) ? resolver.resolve(pid) : undefined;
     const artInfo = resolveObjectArt(values, pid, protoInfo);
-    const q = toNumber(values.MapX ?? values.HexX);
-    const r = toNumber(values.MapY ?? values.HexY);
+    const q = toHex(values.MapX ?? values.HexX);
+    const r = toHex(values.MapY ?? values.HexY);
     const elev = toNumber(values.MapElev ?? values.MapZ ?? values.Elev);
     const dir = toNumber(values.Dir ?? values.Angle) % 6;
     const id = values.Id ?? `o${objects.length + 1}`;
@@ -181,6 +194,9 @@ export async function importFomap(
       offsetX,
       offsetY,
     });
+
+    maxQ = Math.max(maxQ, q);
+    maxR = Math.max(maxR, r);
 
     currentObject = null;
   };
@@ -219,9 +235,9 @@ export async function importFomap(
         continue;
       }
       if (kv.key === 'MaxHexX') {
-        width = toNumber(kv.value, width);
+        width = Math.max(width, toHex(kv.value) + 1);
       } else if (kv.key === 'MaxHexY') {
-        height = toNumber(kv.value, height);
+        height = Math.max(height, toHex(kv.value) + 1);
       }
       continue;
     }
@@ -238,8 +254,8 @@ export async function importFomap(
         continue;
       }
       const [, kind, xRaw, yRaw, artRaw] = match;
-      const q = Number.parseInt(xRaw, 10);
-      const r = Number.parseInt(yRaw, 10);
+      const q = toHex(xRaw);
+      const r = toHex(yRaw);
       const art = normalizeArtPath(artRaw, 0);
       tiles.push({
         q,
@@ -247,6 +263,8 @@ export async function importFomap(
         layer: kind.toLowerCase() === 'roof' ? 'roof' : 'ground',
         art,
       });
+      maxQ = Math.max(maxQ, q);
+      maxR = Math.max(maxR, r);
       continue;
     }
 
@@ -272,6 +290,9 @@ export async function importFomap(
 
   const id = path.basename(filePath, path.extname(filePath));
 
+  const sizeW = Math.max(width, maxQ + 1);
+  const sizeH = Math.max(height, maxR + 1);
+
   return {
     id,
     hex: {
@@ -283,7 +304,7 @@ export async function importFomap(
         elevation: FALLBACK_ELEVATION_STEP,
       },
     },
-    size: { w: width, h: height },
+    size: { w: sizeW, h: sizeH },
     tiles,
     objects,
     spawns,
