@@ -322,6 +322,16 @@ export function createGeneratorPage(): GeneratorPage {
       }
     }
 
+    objects.sort((a, b) => {
+      if (a.r === b.r) {
+        if (a.q === b.q) {
+          return a.id.localeCompare(b.id);
+        }
+        return a.q - b.q;
+      }
+      return a.r - b.r;
+    });
+
     const assetsMeta: Record<string, AssetDescriptor> = {};
     for (const tile of tiles) {
       const asset = assetLookup.get(tile.art);
@@ -345,6 +355,26 @@ export function createGeneratorPage(): GeneratorPage {
       objects,
       assets: assetsMeta,
     };
+  }
+
+  function serializeMapData(): string {
+    const map = buildMapData();
+    const payload = {
+      id: map.id,
+      name: map.name,
+      hex: map.hex,
+      size: map.size,
+      tiles: map.tiles.map(({ layer, q, r, art }) => ({ layer, q, r, art })),
+      objects: map.objects.map(({ id, q, r, elev, dir, art }) => ({ id, q, r, elev, dir, art })),
+      assets: map.assets ?? {},
+    };
+    return JSON.stringify(payload, null, 2);
+  }
+
+  function ensureExportOutput(): string {
+    const json = serializeMapData();
+    exportOutput.value = json;
+    return json;
   }
 
   async function refreshPreview(): Promise<void> {
@@ -795,25 +825,17 @@ export function createGeneratorPage(): GeneratorPage {
   }
 
   exportButton.addEventListener('click', () => {
-    const exportData = buildMapData();
-    const serializable = {
-      id: exportData.id,
-      name: exportData.name,
-      hex: exportData.hex,
-      size: exportData.size,
-      tiles: exportData.tiles.map(({ layer, q, r, art }) => ({ layer, q, r, art })),
-      objects: exportData.objects.map(({ id, q, r, elev, dir, art }) => ({ id, q, r, elev, dir, art })),
-    };
-    exportOutput.value = JSON.stringify(serializable, null, 2);
+    ensureExportOutput();
     setStatus('JSON обновлён');
   });
 
   downloadButton.addEventListener('click', () => {
-    if (!exportOutput.value) {
+    const json = exportOutput.value || ensureExportOutput();
+    if (!json) {
       setStatus('Сначала сформируйте JSON', true);
       return;
     }
-    const blob = new Blob([exportOutput.value], { type: 'application/json' });
+    const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -826,12 +848,13 @@ export function createGeneratorPage(): GeneratorPage {
   });
 
   copyButton.addEventListener('click', async () => {
-    if (!exportOutput.value) {
+    const json = exportOutput.value || ensureExportOutput();
+    if (!json) {
       setStatus('Нет данных для копирования', true);
       return;
     }
     try {
-      await navigator.clipboard.writeText(exportOutput.value);
+      await navigator.clipboard.writeText(json);
       setStatus('JSON скопирован в буфер обмена');
     } catch (error) {
       console.error(error);
